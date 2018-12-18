@@ -1,0 +1,160 @@
+﻿Version=4.3
+IconFile=
+NumberOfModules=11
+Module1=actSplash
+Module2=actList
+Module3=actSetting
+Module4=actContact
+Module5=actLock
+Module6=handlePassword
+Module7=force_close
+Module8=handleSMSPassword
+Module9=MyLibrary
+Module10=myDB
+Module11=CustomListView
+Build1=Default,collection.app.lock
+DoNotOverwriteManifest=True
+ManifestCode='This code will be applied to the manifest file during compilation.~\n~'You do not need to modify it in most cases.~\n~'See this link for for more information: http://www.basic4ppc.com/forum/showthread.php?p=78136~\n~AddManifestText(~\n~<uses-sdk android:minSdkVersion="4" android:targetSdkVersion="14"/>~\n~<supports-screens android:largeScreens="true" ~\n~    android:normalScreens="true" ~\n~    android:smallScreens="true"~\n~    android:anyDensity="true"/>~\n~	)~\n~~\n~SetActivityAttribute(Main, "android:excludeFromRecents", "true")~\n~SetActivityAttribute(actsplash, "android:excludeFromRecents", "true")~\n~SetActivityAttribute(actlist, "android:excludeFromRecents", "true")~\n~SetActivityAttribute(actsetting, "android:excludeFromRecents", "true")~\n~SetActivityAttribute(actlock, "android:excludeFromRecents", "true")~\n~~\n~SetApplicationAttribute(android:icon, "@drawable/icon")~\n~SetApplicationAttribute(android:label, "$LABEL$")~\n~~\n~SetActivityAttribute(actlock, android:theme, @android:style/Theme.Translucent.NoTitleBar)~\n~~\n~AddPermission(android.permission.READ_PHONE_STATE)~\n~AddPermission(android.permission.PROCESS_OUTGOING_CALLS)~\n~AddPermission(android.permission.CALL_PHONE)~\n~~\n~AddReceiverText(handlepassword, <intent-filter>~\n~            <action android:name="android.intent.action.NEW_OUTGOING_CALL" /> ~\n~            <category android:name="android.intent.category.DEFAULT" /> ~\n~        </intent-filter>)~\n~'End of default text.~\n~
+NumberOfFiles=8
+File1=frmabout.bal
+File2=frmkeypad.bal
+File3=frmlist.bal
+File4=frmlock.bal
+File5=frmsetting.bal
+File6=frmsplash.bal
+File7=frmtemplate.bal
+File8=pass.db
+NumberOfLibraries=17
+Library1=core
+Library2=phone
+Library3=mscircularimageview
+Library4=activitymanager
+Library5=oslibrary
+Library6=sql
+Library7=reflection
+Library8=broadcastreceiver
+Library9=preferenceactivity
+Library10=phonestatelistener
+Library11=slidingmenuwrapper
+Library12=packagetype
+Library13=stringutils
+Library14=animationplus
+Library15=rippleeffect
+Library16=dialogs
+Library17=threading
+@EndOfDesignText@
+#Region  Project Attributes 
+	#ApplicationLabel: قفل مخفی
+	#VersionCode: 1
+	#VersionName: 1.0.0
+	'SupportedOrientations possible values: unspecified, landscape or portrait.
+	#SupportedOrientations: portrait
+	#CanInstallToExternalStorage: True
+#End Region
+
+#Region  Activity Attributes 
+	#FullScreen: False
+	#IncludeTitle: False
+#End Region
+
+Sub Process_Globals
+	Dim pre As PreferenceManager
+End Sub
+
+Sub Globals
+	Private db1 As myDB
+	Private txtval As EditText
+End Sub
+
+Sub Activity_Create(FirstTime As Boolean)
+	Activity.LoadLayout("frmkeypad")
+ 	db1.Initialize
+	
+	StartService(handlePassword)
+	StartService(handleSMSPassword)
+	
+	txtval.Color = Colors.Transparent
+	
+	If pre.GetBoolean("first") = False Then
+		StartService(force_close)
+		pre.SetBoolean("first",True)
+		pre.SetBoolean("service",True)
+		pre.SetString("password","00")
+		pre.setBoolean("lock_alert",True)
+		ProgressDialogShow("بار گذاری اولیه...")
+		MyLibrary.LoadPackageList
+		ProgressDialogHide
+	Else
+		Try
+			
+			Dim count As Int
+			count = File.ReadString(File.DirInternal,"countPK")
+			
+			If count <> MyLibrary.getPackageListCount Then
+				ProgressDialogShow("بارگذاری جدید برنامه ها...")
+					MyLibrary.LoadPackageList
+				ProgressDialogHide
+			End If
+			
+		Catch
+		
+		End Try
+	End If
+	
+	If pre.GetBoolean("service") = True Then
+		StartService(force_close)
+	End If
+	
+End Sub
+
+Sub Activity_Resume
+
+End Sub
+
+Sub Activity_Pause (UserClosed As Boolean)
+	Activity.Finish
+End Sub
+
+Sub Activity_KeyPress (KeyCode As Int) As Boolean 'Return True to consume the event
+	Return True
+End Sub
+
+#Region KeyPad
+Sub numbers_Click
+	Dim img1 As ImageView
+	img1 = Sender
+	txtval.Text = txtval.Text & img1.Tag
+	MyLibrary.animationView(img1,False,700)
+End Sub
+
+Sub btndelete_Click
+	Try
+	 txtval.Text = txtval.Text.SubString2(0,txtval.Text.Length - 1)
+	Catch
+	End Try	
+End Sub
+
+Sub btnlogin_Click
+	
+	If txtval.Text.Length = 0 Then
+		ToastMessageShow("خطا : رمز عبور به برنامه را وارد کنید",False)
+		txtval.RequestFocus
+		txtval.Text = ""
+		Return
+	End If
+	
+	If pre.GetString("password") = txtval.Text Then
+		Activity.Finish
+		StartActivity(actSplash)
+	Else
+		ToastMessageShow("خطا : رمز عبور اشتباه است.دوباره تلاش کنید",False)
+		txtval.RequestFocus
+		txtval.Text = ""
+	End If
+	
+End Sub
+
+#End Region
+Sub btnback_Click
+	Activity.Finish
+End Sub
